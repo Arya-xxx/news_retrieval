@@ -38,17 +38,49 @@ class GeminiService:
             return None, error_msg
 
     def _safe_json_parse(self, text: str):
-        """Try parsing JSON directly, else extract the first JSON array in text."""
+        """
+        Try to parse JSON directly. If that fails, extract the first JSON array found in the text.
+        """
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            match = re.search(r"\[\s*{.*}\s*\]", text, re.S)
+            # Extract JSON array from any surrounding text, handling newlines and spacing
+            match = re.search(r"\[\s*\{.*?\}\s*\]", text, re.S)
             if match:
                 return json.loads(match.group(0))
             raise ValueError("No valid JSON array found in response")
 
-    def generate_news_articles(self, category: str, count: int = 5) -> Tuple[List[Dict], Optional[str]]:
-        prompt = f"""Generate exactly {count} of category {category} diverse news articles in pure JSON array format (only JSON, no extra words).
+    def generate_news_articles(
+        self,
+        category: str,
+        count: int = 5,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+        radius_km: int = 500,
+    ) -> Tuple[List[Dict], Optional[str]]:
+        """
+        Generate news articles filtered by category and optionally by location.
+
+        Args:
+            category: News category (Technology, Business, Science).
+            count: Number of articles to generate.
+            latitude: Optional latitude to focus news generation near.
+            longitude: Optional longitude to focus news generation near.
+            radius_km: Radius in kilometers around location.
+
+        Returns:
+            Tuple of list of articles and optional error string.
+        """
+        location_context = ""
+        if latitude is not None and longitude is not None:
+            location_context = (
+                f" around latitude {latitude}, longitude {longitude} "
+                f"within approximately {radius_km} kilometers radius"
+            )
+
+        prompt = f"""Generate exactly {count} diverse news articles of category '{category}'{location_context}.
+Output strictly in JSON array format (no extra text).
+
 Each article must have:
 - title (string)
 - description (string)
@@ -57,6 +89,7 @@ Each article must have:
 - relevance_score (0-1)
 - latitude (float)
 - longitude (float)
+
 Example output:
 [
     {{
@@ -74,7 +107,7 @@ Example output:
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.7,
-                "responseMimeType": "application/json"
+                "responseMimeType": "application/json"  # Use camelCase
             }
         }
 
@@ -92,6 +125,16 @@ Example output:
             return self._get_fallback_articles(count), f"Response parsing failed: {str(e)}"
 
     def generate_summary(self, text: str, max_length: int = 200) -> Tuple[str, Optional[str]]:
+        """
+        Generate a concise summary of the given text.
+
+        Args:
+            text: Text to summarize.
+            max_length: Maximum length of summary in characters.
+
+        Returns:
+            Tuple of summary string and optional error message.
+        """
         prompt = f"""Summarize the following text in 1-2 sentences, under {max_length} characters.
 Return only the summary text, no extra formatting.
 
@@ -112,15 +155,21 @@ Return only the summary text, no extra formatting.
         try:
             summary = result["candidates"][0]["content"]["parts"][0]["text"].strip()
             if len(summary) > max_length:
-                summary = summary[:max_length-3] + "..."
+                summary = summary[:max_length - 3] + "..."
             return summary, None
         except Exception as e:
             return self._truncate_fallback(text, max_length), f"Summary parsing failed: {str(e)}"
 
     def _truncate_fallback(self, text: str, max_length: int) -> str:
-        return text[:max_length].rsplit(' ', 1)[0] + "..." if len(text) > max_length else text
+        """
+        Simple fallback summary by truncating text.
+        """
+        return text[:max_length].rsplit(" ", 1)[0] + "..." if len(text) > max_length else text
 
     def _get_fallback_articles(self, count: int) -> List[Dict]:
+        """
+        Provide fallback sample articles if API call fails.
+        """
         return [
             {
                 "title": f"Fallback News {i+1}",
@@ -129,9 +178,10 @@ Return only the summary text, no extra formatting.
                 "source_name": "FallbackSource",
                 "relevance_score": round(0.8 + (i * 0.05), 2),
                 "latitude": 37.7897 + (i * 0.1),
-                "longitude": -122.4194 + (i * 0.1)
+                "longitude": -122.4194 + (i * 0.1),
             }
             for i in range(count)
         ]
 
-__all__ = ['GeminiService']
+
+__all__ = ["GeminiService"]
