@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from app.db.repositories import news_repository
+from app.utils.redis_cache import cache
 
 news_bp = Blueprint('news', __name__, url_prefix='/api/v1/news')
 
 @news_bp.route('/category', methods=['GET'])
+@cache.cache_response()
 def get_by_category():
     try:
         category = request.args.get('category')
@@ -15,17 +17,16 @@ def get_by_category():
         
         return jsonify({
             "meta": {
-                "generated": True,  # Indicates LLM-generated content
+                "generated": True,
                 "count": len(articles)
             },
             "articles": articles
         })
-    
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @news_bp.route('/score', methods=['GET'])
+@cache.cache_response()
 def get_by_score():
     try:
         min_score = float(request.args.get('min_score', 0.7))
@@ -45,11 +46,8 @@ def get_by_score():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# ------------------------
-# GET by Search Query
-# ------------------------
 @news_bp.route('/search', methods=['GET'])
+@cache.cache_response()
 def search_articles():
     try:
         query = request.args.get('q')
@@ -71,11 +69,8 @@ def search_articles():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# ------------------------
-# GET by Source
-# ------------------------
 @news_bp.route('/source', methods=['GET'])
+@cache.cache_response()
 def get_by_source():
     try:
         source = request.args.get('source')
@@ -97,11 +92,8 @@ def get_by_source():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-# ------------------------
-# GET Nearby Articles
-# ------------------------
 @news_bp.route('/nearby', methods=['GET'])
+@cache.cache_response()
 def get_nearby_articles():
     try:
         lat = request.args.get('lat')
