@@ -5,7 +5,7 @@ import json
 
 llm = GeminiService()  # Initialize GeminiService instead of GeminiService
 
-def generate_and_store_articles(count: int = 5) -> None:
+def generate_and_store_articles(category: str, count: int = 5) -> None:
     """
     Generates sample news articles using Gemini and stores them in MongoDB.
     Only generates if the collection is empty.
@@ -13,7 +13,7 @@ def generate_and_store_articles(count: int = 5) -> None:
     db = get_db()
     
     if db.articles.count_documents({}) == 0:  # Only generate if DB is empty
-        articles, error = llm.generate_news_articles(count)
+        articles, error = llm.generate_news_articles(category,count)
         
         if error:
             print(f"LLM Error: {error}")
@@ -41,7 +41,7 @@ def get_articles_by_category(category: str, limit: int = 5) -> List[Dict]:
     Retrieves articles by category from MongoDB.
     Automatically generates sample data if the collection is empty.
     """
-    generate_and_store_articles()  # Ensure data exists
+    generate_and_store_articles(category, limit)  # Ensure data exists
     return list(get_db().articles.find(
         {"category": category},
         {"_id": 0}  # Exclude MongoDB's default ID field

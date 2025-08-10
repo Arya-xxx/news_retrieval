@@ -47,8 +47,8 @@ class GeminiService:
                 return json.loads(match.group(0))
             raise ValueError("No valid JSON array found in response")
 
-    def generate_news_articles(self, count: int = 5) -> Tuple[List[Dict], Optional[str]]:
-        prompt = f"""Generate exactly {count} diverse news articles in pure JSON array format (only JSON, no extra words).
+    def generate_news_articles(self, category: str, count: int = 5) -> Tuple[List[Dict], Optional[str]]:
+        prompt = f"""Generate exactly {count} of category {category} diverse news articles in pure JSON array format (only JSON, no extra words).
 Each article must have:
 - title (string)
 - description (string)
