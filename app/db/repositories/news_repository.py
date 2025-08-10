@@ -1,9 +1,9 @@
-from app.services.llm_service import GeminiService  # Changed from DeepSeekService to GeminiService
+from app.services.llm_service import GeminiService  # Changed from GeminiService to GeminiService
 from app.db.mongodb import get_db
 from typing import List, Dict
 import json
 
-llm = GeminiService()  # Initialize GeminiService instead of DeepSeekService
+llm = GeminiService()  # Initialize GeminiService instead of GeminiService
 
 def generate_and_store_articles(count: int = 5) -> None:
     """
